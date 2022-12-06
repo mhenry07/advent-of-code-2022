@@ -5,12 +5,17 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-var assignmentPairs = await
+var fullyContainedCount = 0;
+var parseLinesEnumberable =
     FilePipelineParser.ParseLinesAsync<AssignmentPair>("input.txt", Encoding.UTF8, CultureInfo.InvariantCulture);
+await foreach (var assignmentPair in parseLinesEnumberable)
+{
+    if (assignmentPair.HasFullyContainedRange())
+        fullyContainedCount++;
+}
 
 // part 1
-var total = assignmentPairs.Count(p => p.HasFullyContainedRange());
-Console.WriteLine($"Assignment pairs where one range fully contains the other: {total}");
+Console.WriteLine($"Assignment pairs where one range fully contains the other: {fullyContainedCount}");
 
 public record AssignmentPair : ISpanParsable<AssignmentPair>
 {

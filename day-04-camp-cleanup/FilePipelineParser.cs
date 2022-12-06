@@ -14,11 +14,10 @@ public static class FilePipelineParser
 
     // based on https://learn.microsoft.com/en-us/dotnet/standard/io/pipelines
     // and https://timiskhakov.github.io/posts/exploring-spans-and-pipelines
-    public static async ValueTask<IReadOnlyList<TItem>> ParseLinesAsync<TItem>(
+    public static async IAsyncEnumerable<TItem> ParseLinesAsync<TItem>(
         string filename, Encoding encoding, IFormatProvider? provider)
         where TItem : ISpanParsable<TItem>
     {
-        var result = new List<TItem>();
         Memory<char> charBuffer = new char[CharBufferLength]; // allocating once outside loop rather than stackalloc within loop
         using var stream = File.OpenRead(filename);
         var reader = PipeReader.Create(stream);
@@ -30,7 +29,7 @@ public static class FilePipelineParser
             while (TryReadLine(ref buffer, out var line))
             {
                 var item = Parse<TItem>(line, charBuffer, encoding, provider);
-                result.Add(item);
+                yield return item;
             }
 
             reader.AdvanceTo(buffer.Start, buffer.End);
@@ -40,8 +39,6 @@ public static class FilePipelineParser
         }
 
         await reader.CompleteAsync().ConfigureAwait(false);
-
-        return result;
     }
 
     private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
