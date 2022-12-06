@@ -7,19 +7,32 @@ using System.Linq;
 var rucksacks = Data.Input
     .Split("\r\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+int badgeTotalPriority = 0;
 int totalPriority = 0;
-foreach (var rucksack in rucksacks)
+for (int i = 0; i < rucksacks.Length; i++)
 {
+    var rucksack = rucksacks[i];
     var compartment1 = rucksack.Substring(0, rucksack.Length / 2);
     var compartment2 = rucksack.Substring(rucksack.Length / 2);
     var commonItem = compartment1.Intersect(compartment2).Single();
     var priority = Priority(commonItem);
     totalPriority += priority;
     // Console.WriteLine($"1: {compartment1}, 2: {compartment2}, common item: '{commonItem}', priority: {priority}");
+
+    // part 2
+    if (i % 3 == 2)
+    {
+        var badge = rucksacks[i - 2].Intersect(rucksacks[i - 1]).Intersect(rucksack).Single();
+        var badgePriority = Priority(badge);
+        badgeTotalPriority += badgePriority;
+    }
 }
 
 // part 1
 Console.WriteLine($"Sum of common priorities: {totalPriority}");
+
+// part 2
+Console.WriteLine($"Sum of badge priorities: {badgeTotalPriority}");
 
 int Priority(char item)
 {
