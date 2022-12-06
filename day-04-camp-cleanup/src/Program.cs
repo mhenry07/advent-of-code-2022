@@ -47,54 +47,34 @@ internal class Program
 public static class Solution
 {
     private const string FilePath = @"input.txt";
+    private static Encoding Utf8Encoding = Encoding.UTF8;
+    private static IFormatProvider? Provider = CultureInfo.InvariantCulture;
 
     public static async Task<Results> GetResultsPipeWriterReaderAsync()
     {
-        var totalCount = 0;
-        var fullyContainedCount = 0;
-        var overlapCount = 0;
+        var results = new Results();
         var assignmentPairsTask =
-            FilePipelineParser.ParseFileAsync<AssignmentPair>(FilePath, Encoding.UTF8, CultureInfo.InvariantCulture);
+            FilePipelineParser.ParseFileAsync<AssignmentPair>(FilePath, Utf8Encoding, Provider);
         foreach (var assignmentPair in await assignmentPairsTask)
-        {
-            totalCount++;
+            results.Update(assignmentPair);
 
-            if (assignmentPair.HasFullyContainedRange())
-                fullyContainedCount++;
-
-            if (assignmentPair.HasOverlap())
-                overlapCount++;
-        }
-
-        return new Results(totalCount, fullyContainedCount, overlapCount);
+        return results;
     }
 
     public static async Task<Results> GetResultsPipeReaderAsyncEnumerableAsync()
     {
-        var totalCount = 0;
-        var fullyContainedCount = 0;
-        var overlapCount = 0;
+        var results = new Results();
         var assignmentPairsAsyncEnumerable =
-            FilePipelineParser.ParseLinesAsync<AssignmentPair>(FilePath, Encoding.UTF8, CultureInfo.InvariantCulture);
+            FilePipelineParser.ParseLinesAsync<AssignmentPair>(FilePath, Utf8Encoding, Provider);
         await foreach (var assignmentPair in assignmentPairsAsyncEnumerable)
-        {
-            totalCount++;
+            results.Update(assignmentPair);
 
-            if (assignmentPair.HasFullyContainedRange())
-                fullyContainedCount++;
-
-            if (assignmentPair.HasOverlap())
-                overlapCount++;
-        }
-
-        return new Results(totalCount, fullyContainedCount, overlapCount);
+        return results;
     }
 
     public static async Task<Results> GetResultsReadAllBytesSpanAsync()
     {
-        var totalCount = 0;
-        var fullyContainedCount = 0;
-        var overlapCount = 0;
+        var results = new Results();
         Memory<char> charMemory = new char[256];
         Memory<byte> memory = await File.ReadAllBytesAsync(FilePath);
         int start = 0, end = 0;
@@ -103,98 +83,84 @@ public static class Solution
             var index = memory.Span.Slice(start).IndexOf((byte)'\n');
             end = index >= 0 ? start + index : memory.Length - 1;
 
-            totalCount++;
-
-            var assignmentPair = Parse(memory.Slice(start, end - start + 1).Span, charMemory);
-            if (assignmentPair.HasFullyContainedRange())
-                fullyContainedCount++;
-
-            if (assignmentPair.HasOverlap())
-                overlapCount++;
+            var assignmentPair = Parse(memory.Slice(start, end - start + 1).Span, charMemory, Provider);
+            results.Update(assignmentPair);
             
             start = end + 1;
         }
 
-        return new Results(totalCount, fullyContainedCount, overlapCount);
+        return results;
 
-        AssignmentPair Parse(Span<byte> line, Memory<char> charMemory)
+        AssignmentPair Parse(Span<byte> line, Memory<char> charMemory, IFormatProvider? provider)
         {
             var charBuffer = charMemory.Span;
-            var length = Encoding.UTF8.GetChars(line, charBuffer);
+            var length = Utf8Encoding.GetChars(line, charBuffer);
             var chars = charBuffer.Slice(0, length).Trim();
-            return AssignmentPair.Parse(chars, CultureInfo.InvariantCulture);
+            return AssignmentPair.Parse(chars, provider);
         }
     }
 
     public static async Task<Results> GetResultsReadAllLinesAsync()
     {
-        var totalCount = 0;
-        var fullyContainedCount = 0;
-        var overlapCount = 0;
-        var allLines = await File.ReadAllLinesAsync(FilePath, Encoding.UTF8);
+        var results = new Results();
+        var allLines = await File.ReadAllLinesAsync(FilePath, Utf8Encoding);
         foreach (var line in allLines)
         {
-            totalCount++;
-
             var assignmentPair = AssignmentPair.ParseAllocating(line);
-            if (assignmentPair.HasFullyContainedRange())
-                fullyContainedCount++;
-
-            if (assignmentPair.HasOverlap())
-                overlapCount++;
+            results.Update(assignmentPair);
         }
 
-        return new Results(totalCount, fullyContainedCount, overlapCount);
+        return results;
     }
 
     public static async Task<Results> GetResultsReadLinesAsync()
     {
-        var totalCount = 0;
-        var fullyContainedCount = 0;
-        var overlapCount = 0;
-        var linesAsyncEnumerable = File.ReadLinesAsync(FilePath, Encoding.UTF8);
+        var results = new Results();
+        var linesAsyncEnumerable = File.ReadLinesAsync(FilePath, Utf8Encoding);
         await foreach (var line in linesAsyncEnumerable)
         {
-            totalCount++;
-
             var assignmentPair = AssignmentPair.ParseAllocating(line);
-            if (assignmentPair.HasFullyContainedRange())
-                fullyContainedCount++;
-
-            if (assignmentPair.HasOverlap())
-                overlapCount++;
+            results.Update(assignmentPair);
         }
 
-        return new Results(totalCount, fullyContainedCount, overlapCount);
+        return results;
     }
 
     public static async Task<Results> GetResultsStreamReaderAsync()
     {
-        var totalCount = 0;
-        var fullyContainedCount = 0;
-        var overlapCount = 0;
-        using var streamReader = new StreamReader(FilePath, Encoding.UTF8);
+        var results = new Results();
+        using var streamReader = new StreamReader(FilePath, Utf8Encoding);
         while (true)
         {
             var line = await streamReader.ReadLineAsync();
             if (line == null)
                 break;
 
-            totalCount++;
-
             var assignmentPair = AssignmentPair.ParseAllocating(line);
-            if (assignmentPair.HasFullyContainedRange())
-                fullyContainedCount++;
-
-            if (assignmentPair.HasOverlap())
-                overlapCount++;
+            results.Update(assignmentPair);
         }
 
-        return new Results(totalCount, fullyContainedCount, overlapCount);
+        return results;
     }
 }
 
-public record struct Results(int TotalCount, int FullyContainedCount, int OverlapCount);
+public record struct Results
+{
+    public int TotalCount { get; set; }
+    public int FullyContainedCount { get; set; }
+    public int OverlapCount { get; set; }
+
+    public void Update(AssignmentPair assignmentPair)
+    {
+        TotalCount++;
+
+        if (assignmentPair.HasFullyContainedRange())
+            FullyContainedCount++;
+
+        if (assignmentPair.HasOverlap())
+            OverlapCount++;
+    }
+}
 
 // implementation
 // would it be worthwhile for this to be a record struct? yes - it makes a significant difference in allocations
