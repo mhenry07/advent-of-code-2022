@@ -6,17 +6,25 @@ using System.Globalization;
 using System.Text;
 
 var fullyContainedCount = 0;
-var parseLinesEnumberable =
+var overlapCount = 0;
+var assignmentPairsAsyncEnumerable =
     FilePipelineParser.ParseLinesAsync<AssignmentPair>("input.txt", Encoding.UTF8, CultureInfo.InvariantCulture);
-await foreach (var assignmentPair in parseLinesEnumberable)
+await foreach (var assignmentPair in assignmentPairsAsyncEnumerable)
 {
     if (assignmentPair.HasFullyContainedRange())
         fullyContainedCount++;
+
+    if (assignmentPair.HasOverlap())
+        overlapCount++;
 }
 
 // part 1
 Console.WriteLine($"Assignment pairs where one range fully contains the other: {fullyContainedCount}");
 
+// part 2
+Console.WriteLine($"Assignment pairs with overlapping ranges: {overlapCount}");
+
+// implementation
 public record AssignmentPair : ISpanParsable<AssignmentPair>
 {
     public Range Elf1 { get; init; }
@@ -24,6 +32,9 @@ public record AssignmentPair : ISpanParsable<AssignmentPair>
 
     public bool HasFullyContainedRange() =>
         Elf1.FullyContains(Elf2) || Elf2.FullyContains(Elf1);
+
+    public bool HasOverlap() =>
+        Elf1.Overlaps(Elf2);
 
     public static AssignmentPair Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
     {
@@ -89,4 +100,7 @@ public static class RangeExtensions
     public static bool FullyContains(this Range source, Range other) =>
         source.Start.Value <= other.Start.Value &&
         source.End.Value >= other.End.Value;
+
+    public static bool Overlaps(this Range source, Range other) =>
+        source.Start.Value <= other.End.Value && source.End.Value >= other.Start.Value;
 }
