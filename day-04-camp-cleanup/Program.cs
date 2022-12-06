@@ -211,8 +211,8 @@ public class Solution
 public record Results(int TotalCount, int FullyContainedCount, int OverlapCount);
 
 // implementation
-// would it be worthwhile for this to be a record struct?
-public record AssignmentPair : ISpanParsable<AssignmentPair>
+// would it be worthwhile for this to be a record struct? yes - it makes a significant difference in allocations
+public record struct AssignmentPair : ISpanParsable<AssignmentPair>
 {
     public Range Elf1 { get; init; }
     public Range Elf2 { get; init; }
