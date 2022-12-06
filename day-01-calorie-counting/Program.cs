@@ -12,3 +12,10 @@ foreach (var group in groups)
 var maxCalories = caloriesPerElf.Max();
 
 Console.WriteLine($"The most calories an elf is carrying: {maxCalories}");
+
+// https://adventofcode.com/2022/day/1#part2
+
+var top3 = caloriesPerElf.OrderDescending().Take(3);
+var sumOfTop3 = top3.Sum();
+
+Console.WriteLine($"The top 3 elves are carrying: {sumOfTop3} calories");
