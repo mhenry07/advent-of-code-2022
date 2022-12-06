@@ -10,9 +10,10 @@ using System.Text;
 /// </remarks>
 public static class FilePipelineParser
 {
-    private const int CharBufferLength = 256; // should be <= 1 KB if using stackalloc
+    public const int MaxStackallocLength = 256; // should be <= 1 KB when using stackalloc
 
     // implementing both halves of the pipe seems comparable to only implementing the reader via PipeReader.FromStream
+    // update: the reader/writer allocates more (likely due to the List)
     public static async Task<IReadOnlyList<TItem>> ParseFileAsync<TItem>(
         string filename, Encoding encoding, IFormatProvider? provider, CancellationToken cancellationToken = default)
         where TItem : ISpanParsable<TItem>
@@ -64,7 +65,6 @@ public static class FilePipelineParser
         where TItem : ISpanParsable<TItem>
     {
         var items = new List<TItem>();
-        Memory<char> charBuffer = new char[CharBufferLength]; // allocating once outside loop rather than stackalloc within loop
         while (true)
         {
             var readResult = await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
@@ -72,7 +72,7 @@ public static class FilePipelineParser
 
             while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
             {
-                var item = Parse<TItem>(line, charBuffer, encoding, provider);
+                var item = Parse<TItem>(line, encoding, provider);
                 items.Add(item);
             }
 
@@ -89,13 +89,13 @@ public static class FilePipelineParser
 
     // based on https://learn.microsoft.com/en-us/dotnet/standard/io/pipelines
     // and https://timiskhakov.github.io/posts/exploring-spans-and-pipelines
-    // TODO: I think file read should be a Pipeline "writer" (e.g. FillPipeAsync)
+    // note: I think file read should be a Pipeline "writer" (e.g. FillPipeAsync)
     //       and the parser and/or consumer should be a Pipeline "reader"?
+    //      (No: it's comparable, but our writer+reader uses a List which allocates more)
     public static async IAsyncEnumerable<TItem> ParseLinesAsync<TItem>(
         string filename, Encoding encoding, IFormatProvider? provider)
         where TItem : ISpanParsable<TItem>
     {
-        Memory<char> charBuffer = new char[CharBufferLength]; // allocating once outside loop rather than stackalloc within loop
         using var stream = File.OpenRead(filename);
         var reader = PipeReader.Create(stream);
         while (true)
@@ -105,7 +105,7 @@ public static class FilePipelineParser
 
             while (TryReadLine(ref buffer, out var line))
             {
-                var item = Parse<TItem>(line, charBuffer, encoding, provider);
+                var item = Parse<TItem>(line, encoding, provider);
                 yield return item;
             }
 
@@ -134,14 +134,14 @@ public static class FilePipelineParser
         return true;
     }
 
-    // TODO: benchmark `Span<char> charBuffer = stackalloc char[line.Length]` here vs. Memory<T> outside loop
+    // it allocates less to use stackalloc here rather than passing in a Memory<char>
     private static TItem Parse<TItem>(
-        ReadOnlySequence<byte> line, Memory<char> charMemory, Encoding encoding, IFormatProvider? provider)
+        ReadOnlySequence<byte> line, Encoding encoding, IFormatProvider? provider)
         where TItem : ISpanParsable<TItem>
     {
         char[]? rented = null;
-        Span<char> charBuffer = line.Length <= charMemory.Length
-            ? charMemory.Span
+        Span<char> charBuffer = line.Length <= MaxStackallocLength
+            ? stackalloc char[(int)line.Length]
             : (rented = ArrayPool<char>.Shared.Rent((int)line.Length));
 
         try

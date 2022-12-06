@@ -1,6 +1,7 @@
 ﻿// Day 4: Camp Cleanup
 // https://adventofcode.com/2022/day/4
 
+using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -75,7 +76,6 @@ public static class Solution
     public static async Task<Results> GetResultsReadAllBytesSpanAsync()
     {
         var results = new Results();
-        Memory<char> charMemory = new char[256];
         Memory<byte> memory = await File.ReadAllBytesAsync(FilePath);
         int start = 0, end = 0;
         while (start < memory.Length)
@@ -83,7 +83,7 @@ public static class Solution
             var index = memory.Span.Slice(start).IndexOf((byte)'\n');
             end = index >= 0 ? start + index : memory.Length - 1;
 
-            var assignmentPair = Parse(memory.Slice(start, end - start + 1).Span, charMemory, Provider);
+            var assignmentPair = Parse(memory.Slice(start, end - start + 1).Span, Provider);
             results.Update(assignmentPair);
             
             start = end + 1;
@@ -91,12 +91,24 @@ public static class Solution
 
         return results;
 
-        AssignmentPair Parse(Span<byte> line, Memory<char> charMemory, IFormatProvider? provider)
+        AssignmentPair Parse(Span<byte> line, IFormatProvider? provider)
         {
-            var charBuffer = charMemory.Span;
-            var length = Utf8Encoding.GetChars(line, charBuffer);
-            var chars = charBuffer.Slice(0, length).Trim();
-            return AssignmentPair.Parse(chars, provider);
+            char[]? rented = null;
+            var charBuffer = line.Length <= FilePipelineParser.MaxStackallocLength
+                ? stackalloc char[line.Length]
+                : (rented = ArrayPool<char>.Shared.Rent((int)line.Length));
+
+            try
+            {
+                var length = Utf8Encoding.GetChars(line, charBuffer);
+                var chars = charBuffer.Slice(0, length).Trim();
+                return AssignmentPair.Parse(chars, provider);
+            }
+            finally
+            {
+                if (rented != null)
+                    ArrayPool<char>.Shared.Return(rented);
+            }
         }
     }
 
