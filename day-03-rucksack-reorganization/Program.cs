@@ -1,8 +1,9 @@
 ﻿// Day 3: Rucksack Reorganization
 // https://adventofcode.com/2022/day/3
 
-using System;
-using System.Linq;
+using System.Diagnostics;
+
+var sw = Stopwatch.StartNew();
 
 var rucksacks = Data.Input
     .Split("\r\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -28,11 +29,15 @@ for (int i = 0; i < rucksacks.Length; i++)
     }
 }
 
+sw.Stop();
+
 // part 1
 Console.WriteLine($"Sum of common priorities: {totalPriority}");
 
 // part 2
 Console.WriteLine($"Sum of badge priorities: {badgeTotalPriority}");
+
+Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds:N2} ms for {rucksacks.Length:N0} records"); // note: input is already in memory
 
 int Priority(char item)
 {

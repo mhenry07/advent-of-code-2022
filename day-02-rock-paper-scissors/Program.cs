@@ -1,21 +1,26 @@
 ﻿// Day 2: https://adventofcode.com/2022/day/2
 
-using System;
-using System.Linq;
+using System.Diagnostics;
+
+var sw = Stopwatch.StartNew();
 
 var rounds = Data.Input
     .Split("\r\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     .Select(r => Round.Parse(r))
     .ToArray();
 
-// part 1
 var totalScore1 = rounds.Sum(r => r.Score1());
+var totalScore2 = rounds.Sum(r => r.Score2());
+
+sw.Stop();
+
+// part 1
 Console.WriteLine($"Part 1: Total score: {totalScore1} points");
 
 // part 2
-var totalScore2 = rounds.Sum(r => r.Score2());
 Console.WriteLine($"Part 2: Total score: {totalScore2} points");
 
+Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds:N2} ms for {rounds.Length:N0} records"); // note: input is already in memory
 
 // implementations
 
