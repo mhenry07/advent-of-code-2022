@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Pipelines;
@@ -20,32 +21,46 @@ public static class Solution
 
     public static async Task GetResultsAsync()
     {
+        var sw = Stopwatch.StartNew();
+
         var x = await SupplyStacksService.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
-
-        Console.WriteLine($"Starting stacks lines: {x.StartingStackLines.Count}, Rearrangement procedure lines: {x.RearrangementProcedure.Count}");
-
-        Console.WriteLine();
-        Console.WriteLine("== Starting Stacks ==");
+        var startingStackLinesCount = x.StartingStackLines.Count;
         if (!SupplyStacksService.TryParseStartingStackLines(x.StartingStackLines, Provider, out var initialStacks))
         {
             Console.WriteLine("Failed to parse StartingStackLines");
             return;
         }
+        var rearrangedStacks9000 = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9000);
+        var rearrangedStacks9001 = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9001);
+        var topCrates9000 = SupplyStacksService.GetTopCrates(rearrangedStacks9000);
+        var topCrates9001 = SupplyStacksService.GetTopCrates(rearrangedStacks9001);
 
+        var elapsedMs = sw.ElapsedMilliseconds;
+
+        Console.WriteLine($"Starting stacks lines: {startingStackLinesCount}, Rearrangement procedure lines: {x.RearrangementProcedure.Count}");
+
+        Console.WriteLine();
+        Console.WriteLine("== Starting Stacks ==");
         //Console.WriteLine($"Ids: {string.Join(' ', initialStacks.Select(s => s.Id))}");
         foreach (var stack in initialStacks)
             Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
 
         Console.WriteLine();
-        Console.WriteLine("== Rearranged Stacks ==");
-        // var rearrangedStacks = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9000);
-        var rearrangedStacks = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9001);
-        foreach (var stack in initialStacks)
+        Console.WriteLine("== Rearranged Stacks: 9000 ==");
+        foreach (var stack in rearrangedStacks9000)
             Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
+        Console.WriteLine();
+        Console.WriteLine($"Top crates 9000: {string.Join("", topCrates9000)}");
 
         Console.WriteLine();
-        var topCrates = SupplyStacksService.GetTopCrates(rearrangedStacks);
-        Console.WriteLine($"Top crates: {string.Join("", topCrates)}");
+        Console.WriteLine("== Rearranged Stacks: 9001 ==");
+        foreach (var stack in rearrangedStacks9001)
+            Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
+        Console.WriteLine();
+        Console.WriteLine($"Top crates\ 9001: {string.Join("", topCrates9001)}");
+
+        Console.WriteLine();
+        Console.WriteLine($"Elapsed: {elapsedMs} ms");
     }
 }
 
@@ -131,8 +146,12 @@ public static class SupplyStacksService
     }
 
     public static IReadOnlyList<SupplyStack> RearrangeStacks(
-        IReadOnlyList<SupplyStack> stacks, IReadOnlyList<CraneMove> rearrangementProcedure, int model)
+        IReadOnlyList<SupplyStack> initialStacks, IReadOnlyList<CraneMove> rearrangementProcedure, int model)
     {
+        var stacks = initialStacks
+            .Select(s => s with { Stack = new Stack<char>(s.Stack.Reverse()) })
+            .ToArray();
+
         foreach (var move in rearrangementProcedure)
         {
             var from = stacks[move.From - 1];
@@ -273,7 +292,7 @@ public record struct CharBuffer(char[] Buffer, int Length) : IDisposable
 
 public record struct SupplyStack(int Id, int Offset)
 {
-    public Stack<char> Stack { get; } = new Stack<char>();
+    public Stack<char> Stack { get; init; } = new Stack<char>();
 }
 
 public record struct CraneMove : ISpanParsable<CraneMove>
