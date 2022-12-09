@@ -38,8 +38,8 @@ public static class Solution
 
         Console.WriteLine();
         Console.WriteLine("== Rearranged Stacks ==");
-        var rearrangedStacks = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9000);
-        //var rearrangedStacks = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9001);
+        // var rearrangedStacks = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9000);
+        var rearrangedStacks = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9001);
         foreach (var stack in initialStacks)
             Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
 
@@ -142,9 +142,9 @@ public static class SupplyStacksService
                 case 9000:
                     Move9000(from, to, move.Quantity);
                     break;
-                // case 9001:
-                //     Move9001(from, to, move.Quantity);
-                //     break;
+                case 9001:
+                    Move9001(from, to, move.Quantity);
+                    break;
             }
         }
 
@@ -161,19 +161,19 @@ public static class SupplyStacksService
         }
     }
 
-    // // part 2: CrateMover 9001: move N crates at a time
-    // private static void Move9001(SupplyStack from, SupplyStack to, int quantity)
-    // {
-    //     Span<char> crates = quantity <= FilePipelineParser.MaxStackallocLength
-    //         ? stackalloc char[quantity]
-    //         : throw new NotSupportedException($"Too many crates: {quantity}");
+    // part 2: CrateMover 9001: move N crates at a time
+    private static void Move9001(SupplyStack from, SupplyStack to, int quantity)
+    {
+        Span<char> crates = quantity <= FilePipelineParser.MaxStackallocLength
+            ? stackalloc char[quantity]
+            : throw new NotSupportedException($"Too many crates: {quantity}");
 
-    //     for (int i = 0; i < quantity; i++)
-    //         crates[i] = from.Stack.Pop();
+        for (int i = 0; i < quantity; i++)
+            crates[i] = from.Stack.Pop();
 
-    //     for (int j = quantity - 1; j >= 0; j--)
-    //         to.Stack.Push(crates[j]);
-    // }
+        for (int j = quantity - 1; j >= 0; j--)
+            to.Stack.Push(crates[j]);
+    }
 
     public static IReadOnlyList<char> GetTopCrates(IReadOnlyList<SupplyStack> stacks)
     {
