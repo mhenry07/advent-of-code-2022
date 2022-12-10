@@ -23,26 +23,20 @@ public static class Solution
     {
         var sw = Stopwatch.StartNew();
 
-        var x = await SupplyStacksService.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
-        var startingStackLinesCount = x.StartingStackLines.Count;
-        if (!SupplyStacksService.TryParseStartingStackLines(x.StartingStackLines, Provider, out var initialStacks))
-        {
-            Console.WriteLine("Failed to parse StartingStackLines");
-            return;
-        }
-        var rearrangedStacks9000 = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9000);
-        var rearrangedStacks9001 = SupplyStacksService.RearrangeStacks(initialStacks, x.RearrangementProcedure, 9001);
+        var supplyStacks = await SupplyStacksService.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
+        var rearrangedStacks9000 = SupplyStacksService.RearrangeStacks(supplyStacks, 9000);
+        var rearrangedStacks9001 = SupplyStacksService.RearrangeStacks(supplyStacks, 9001);
         var topCrates9000 = SupplyStacksService.GetTopCrates(rearrangedStacks9000);
         var topCrates9001 = SupplyStacksService.GetTopCrates(rearrangedStacks9001);
 
         var elapsedMs = sw.ElapsedMilliseconds;
 
-        Console.WriteLine($"Starting stacks lines: {startingStackLinesCount}, Rearrangement procedure lines: {x.RearrangementProcedure.Count}");
+        Console.WriteLine($"Starting stacks lines: {supplyStacks.Stacks.Count}, Rearrangement procedure lines: {supplyStacks.RearrangementProcedure.Count}");
 
         Console.WriteLine();
         Console.WriteLine("== Starting Stacks ==");
         //Console.WriteLine($"Ids: {string.Join(' ', initialStacks.Select(s => s.Id))}");
-        foreach (var stack in initialStacks)
+        foreach (var stack in supplyStacks.Stacks)
             Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
 
         Console.WriteLine();
@@ -57,7 +51,7 @@ public static class Solution
         foreach (var stack in rearrangedStacks9001)
             Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
         Console.WriteLine();
-        Console.WriteLine($"Top crates\ 9001: {string.Join("", topCrates9001)}");
+        Console.WriteLine($"Top crates: 9001: {string.Join("", topCrates9001)}");
 
         Console.WriteLine();
         Console.WriteLine($"Elapsed: {elapsedMs} ms");
@@ -66,11 +60,12 @@ public static class Solution
 
 public static class SupplyStacksService
 {
-    public static async Task<(Stack<CharBuffer> StartingStackLines, IReadOnlyList<CraneMove> RearrangementProcedure)> ParseLinesAsync(
+    public static async Task<SupplyStacks> ParseLinesAsync(
         string filename, Encoding encoding, IFormatProvider? provider)
     {
-        var startingStackLines = new Stack<CharBuffer>();
-        var rearrangementProcedure = new List<CraneMove>();
+        Stack<CharBuffer> startingStackLines = new();
+        IReadOnlyList<SupplyStack>? startingStacks = default;
+        List<CraneMove> rearrangementProcedure = new();
         var state = ParseState.StartingStacks;
 
         using var stream = File.OpenRead(filename);
@@ -86,10 +81,17 @@ public static class SupplyStacksService
                 {
                     case ParseState.StartingStacks:
                         if (isBlankLine(line))
+                        {
+                            if (!TryParseStartingStackLines(startingStackLines, provider, out startingStacks))
+                                throw new FormatException("Failed to parse starting stack lines");
                             state = ParseState.RearrangementProcedure;
+                        }
                         else
+                        {
                             startingStackLines.Push(encoding.GetCharBuffer(line));
+                        }
                         break;
+
                     case ParseState.RearrangementProcedure:
                         if (!isBlankLine(line))
                             rearrangementProcedure.Add(FilePipelineParser.Parse<CraneMove>(line, encoding, provider));
@@ -105,7 +107,7 @@ public static class SupplyStacksService
 
         await reader.CompleteAsync().ConfigureAwait(false);
 
-        return (startingStackLines, rearrangementProcedure);
+        return new SupplyStacks(startingStacks ?? Array.Empty<SupplyStack>(), rearrangementProcedure);
 
         bool isBlankLine(ReadOnlySequence<byte> line) =>
             line.IsSingleSegment && line.FirstSpan.TrimEnd((byte)'\r').IsEmpty;
@@ -129,6 +131,7 @@ public static class SupplyStacksService
                             return Try.Failed(out result);
                         state = StacksParseState.Crates;
                         break;
+
                     case StacksParseState.Crates:
                         if (!TryParseAndPushCrates(supplyStacks, span, provider))
                             return Try.Failed(out result);
@@ -145,14 +148,16 @@ public static class SupplyStacksService
         return result is not null;
     }
 
-    public static IReadOnlyList<SupplyStack> RearrangeStacks(
-        IReadOnlyList<SupplyStack> initialStacks, IReadOnlyList<CraneMove> rearrangementProcedure, int model)
+    public static IReadOnlyList<SupplyStack> RearrangeStacks(SupplyStacks supplyStacks, int model)
     {
-        var stacks = initialStacks
+        if (supplyStacks.Stacks is null)
+            return Array.Empty<SupplyStack>();
+
+        var stacks = supplyStacks.Stacks
             .Select(s => s with { Stack = new Stack<char>(s.Stack.Reverse()) })
             .ToArray();
 
-        foreach (var move in rearrangementProcedure)
+        foreach (var move in supplyStacks.RearrangementProcedure)
         {
             var from = stacks[move.From - 1];
             var to = stacks[move.To - 1];
@@ -289,6 +294,10 @@ public record struct CharBuffer(char[] Buffer, int Length) : IDisposable
         ArrayPool<char>.Shared.Return(Buffer);
     }
 }
+
+public record struct SupplyStacks(
+    IReadOnlyList<SupplyStack> Stacks, IReadOnlyList<CraneMove> RearrangementProcedure)
+{ }
 
 public record struct SupplyStack(int Id, int Offset)
 {
