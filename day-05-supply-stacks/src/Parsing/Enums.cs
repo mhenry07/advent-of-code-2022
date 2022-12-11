@@ -11,3 +11,10 @@ internal enum StacksParseState
     Ids,
     Crates
 }
+
+internal enum StackRowType
+{
+    Unknown,
+    Crates,
+    Ids
+}

@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Text;
 
@@ -8,7 +10,7 @@ public static class StackRowsStacksParser
     public static async Task<SupplyStacks> ParseLinesAsync(
         string filename, Encoding encoding, IFormatProvider? provider)
     {
-        Stack<SupplyStackRow> stackRows = new();
+        Stack<SpanStackRow> stackRows = new();
         IReadOnlyList<SupplyStack>? startingStacks = default;
         List<CraneMove> rearrangementProcedure = new();
         var state = ParseState.StartingStacks;
@@ -33,7 +35,7 @@ public static class StackRowsStacksParser
                         else
                         {
                             stackRows.Push(
-                                FilePipelineParser.Parse<SupplyStackRow>(line, encoding, provider));
+                                FilePipelineParser.Parse<SpanStackRow>(line, encoding, provider));
                         }
                         break;
 
@@ -56,7 +58,7 @@ public static class StackRowsStacksParser
     }
 
     private static IReadOnlyList<SupplyStack> CreateSupplyStacks(
-        Stack<SupplyStackRow> stackRows, IFormatProvider? provider)
+        Stack<SpanStackRow> stackRows, IFormatProvider? provider)
     {
         SupplyStack[]? supplyStacks = null;
         var state = StacksParseState.Ids;
@@ -69,7 +71,7 @@ public static class StackRowsStacksParser
                 {
                     case StacksParseState.Ids:
                     {
-                        if (stackRow.RowType != SupplyStackRow.Type.Ids)
+                        if (stackRow.RowType != StackRowType.Ids)
                             throw new ArgumentException($"Expected row type to be Ids but found: {stackRow.RowType}");
 
                         supplyStacks = new SupplyStack[span.Length];
@@ -84,7 +86,7 @@ public static class StackRowsStacksParser
 
                     case StacksParseState.Crates:
                     {
-                        if (stackRow.RowType != SupplyStackRow.Type.Crates)
+                        if (stackRow.RowType != StackRowType.Crates)
                             throw new ArgumentException($"Expected row type to be Crates but found: {stackRow.RowType}");
                         if (supplyStacks is null)
                             throw new InvalidOperationException("Expected supplyStacks to be initialized but it was null");
@@ -113,5 +115,119 @@ public static class StackRowsStacksParser
             throw new InvalidOperationException("Expected supplyStacks to be initialized but it was null");
 
         return supplyStacks;
+    }
+
+    private record struct SpanStackRow(StackRowType RowType) : ISpanParsable<SpanStackRow>, IDisposable
+    {
+        private CratePosition[] _values;
+        private int _count;
+
+        public ReadOnlySpan<CratePosition> AsSpan() =>
+            _values.AsSpan(0, _count);
+
+        public static SpanStackRow Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
+        {
+            if (TryParse(s, provider, out var result))
+                return result;
+
+            throw new FormatException($"{s}");
+        }
+
+        public static SpanStackRow Parse(string s, IFormatProvider? provider) =>
+            Parse(s.AsSpan(), provider);
+
+        public static bool TryParse(
+            ReadOnlySpan<char> s, IFormatProvider? provider, [MaybeNullWhen(false)] out SpanStackRow result)
+        {
+            CratePosition[]? rented = null;
+            var buffer = s.Length <= FilePipelineParser.MaxStackallocLength
+                ? stackalloc CratePosition[s.Length]
+                : (rented = ArrayPool<CratePosition>.Shared.Rent(s.Length));
+
+            var count = 0;
+            // var values = ArrayPool<CratePosition>.Shared.Rent(s.Length);
+            var type = StackRowType.Unknown;
+            for (int i = 0; i < s.Length; i++)
+            {
+                switch (s[i])
+                {
+                    case ' ':
+                        continue;
+
+                    case '\r':
+                        break;
+
+                    case '[':
+                    {
+                        if (type == StackRowType.Unknown)
+                            type = StackRowType.Crates;
+
+                        var crateSlice = s.Slice(i + 1);
+                        var length = crateSlice.IndexOf("]");
+                        if (length != 1)
+                            return tryFailed(rented, out result);
+
+                        buffer[count] = new CratePosition(crateSlice[0], i + 1);
+                        count++;
+                        i += length + 1;
+                        continue;
+                    }
+
+                    case >= '0' and <= '9':
+                    {
+                        if (type == StackRowType.Unknown)
+                            type = StackRowType.Ids;
+
+                        var idSlice = s.Slice(i);
+                        var length = idSlice.IndexOf(' ');
+                        if (idSlice.Length != 1 && length != 1)
+                            return tryFailed(rented, out result);
+
+                        buffer[count] = new CratePosition(s[i], i);
+                        count++;
+                        continue;
+                    }
+
+                    default:
+                        return tryFailed(rented, out result);
+                }
+            }
+
+            if (count == 0)
+                return tryFailed(rented, out result);
+
+            if (rented is null)
+            {
+                rented = ArrayPool<CratePosition>.Shared.Rent(count);
+                buffer.Slice(0, count).CopyTo(rented.AsSpan());
+            }
+
+            result = new SpanStackRow(type)
+            {
+                _values = rented,
+                _count = count
+            };
+            return true;
+
+            bool tryFailed(CratePosition[]? rented, out SpanStackRow result)
+            {
+                if (rented is not null)
+                    ArrayPool<CratePosition>.Shared.Return(rented);
+
+                return Try.Failed(out result);
+            }
+        }
+
+        public static bool TryParse(
+            [NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out SpanStackRow result)
+        {
+            if (s is null)
+                return Try.Failed(out result);
+
+            return TryParse(s.AsSpan(), provider, out result);
+        }
+
+        public void Dispose() =>
+            ArrayPool<CratePosition>.Shared.Return(_values);
     }
 }

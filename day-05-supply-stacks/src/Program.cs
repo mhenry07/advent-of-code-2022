@@ -13,7 +13,13 @@ internal class Program
         WriteResults(resultsCharBuffers, "CharBuffers");
 
         var resultsStackRows = await Solution.GetResultsStackRowsAsync();
-        WriteResults(resultsCharBuffers, "StackRows");
+        WriteResults(resultsStackRows, "StackRows");
+
+        var resultsRegexAllLines = await Solution.GetResultsRegexAllLinesAsync();
+        WriteResults(resultsRegexAllLines, "Regex ReadAllLines");
+
+        var resultsRegexPipeline = await Solution.GetResultsRegexPipelineAsync();
+        WriteResults(resultsRegexPipeline, "Regex Pipeline");
     }
 
     public static void WriteResults(Results results, string label)
@@ -75,6 +81,40 @@ public static class Solution
         var sw = Stopwatch.StartNew();
 
         var supplyStacks = await StackRowsStacksParser.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
+        var results = new Results
+        {
+            SupplyStacks = supplyStacks,
+            Results9000 = RearrangeStacks(supplyStacks, 9000),
+            Results9001 = RearrangeStacks(supplyStacks, 9001)
+        };
+
+        results.ElapsedMs = sw.ElapsedMilliseconds;
+
+        return results;
+    }
+
+    public static async Task<Results> GetResultsRegexAllLinesAsync()
+    {
+        var sw = Stopwatch.StartNew();
+
+        var supplyStacks = await RegexAllLinesStacksParser.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
+        var results = new Results
+        {
+            SupplyStacks = supplyStacks,
+            Results9000 = RearrangeStacks(supplyStacks, 9000),
+            Results9001 = RearrangeStacks(supplyStacks, 9001)
+        };
+
+        results.ElapsedMs = sw.ElapsedMilliseconds;
+
+        return results;
+    }
+
+    public static async Task<Results> GetResultsRegexPipelineAsync()
+    {
+        var sw = Stopwatch.StartNew();
+
+        var supplyStacks = await RegexPipelineStacksParser.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
         var results = new Results
         {
             SupplyStacks = supplyStacks,

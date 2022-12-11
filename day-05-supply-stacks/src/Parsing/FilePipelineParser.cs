@@ -149,7 +149,7 @@ public static class FilePipelineParser
         try
         {
             var length = encoding.GetChars(line, charBuffer);
-            var chars = charBuffer.Slice(0, length).Trim();
+            var chars = charBuffer.Slice(0, length).TrimEnd('\r');
 
             return TItem.Parse(chars, provider);
         }
