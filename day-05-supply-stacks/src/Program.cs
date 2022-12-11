@@ -9,8 +9,41 @@ internal class Program
 {
     private static async Task Main(string[] args)
     {
-        await Solution.GetResultsCharBuffersAsync();
-        await Solution.GetResultsStackRowsAsync();
+        var resultsCharBuffers = await Solution.GetResultsCharBuffersAsync();
+        WriteResults(resultsCharBuffers, "CharBuffers");
+
+        var resultsStackRows = await Solution.GetResultsStackRowsAsync();
+        WriteResults(resultsCharBuffers, "StackRows");
+    }
+
+    public static void WriteResults(Results results, string label)
+    {
+        Console.WriteLine($"= Strategy: {label} =");
+
+        var supplyStacks = results.SupplyStacks;
+        Console.WriteLine($"Starting stacks lines: {supplyStacks.Stacks.Count}, Rearrangement procedure lines: {supplyStacks.RearrangementProcedure.Count}");
+        Console.WriteLine();
+        Console.WriteLine("== Starting Stacks ==");
+        //Console.WriteLine($"Ids: {string.Join(' ', initialStacks.Select(s => s.Id))}");
+        foreach (var stack in supplyStacks.Stacks)
+            Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
+
+        WriteRearrangedStacks(results.Results9000);
+        WriteRearrangedStacks(results.Results9001);
+
+        Console.WriteLine();
+        Console.WriteLine($"Elapsed: {results.ElapsedMs} ms");
+        Console.WriteLine();
+    }
+
+    private static void WriteRearrangedStacks(ModelResults modelResults)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"== Rearranged Stacks: {modelResults.Model} ==");
+        foreach (var stack in modelResults.RearrangedStacks)
+            Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
+        Console.WriteLine();
+        Console.WriteLine($"Top crates {modelResults.Model}: {string.Join("", modelResults.TopCrates)}");
     }
 }
 
@@ -20,84 +53,55 @@ public static class Solution
     private static Encoding Utf8Encoding = Encoding.UTF8;
     private static IFormatProvider? Provider = CultureInfo.InvariantCulture;
 
-    public static async Task<string?> GetResultsCharBuffersAsync(bool quiet = false)
+    public static async Task<Results> GetResultsCharBuffersAsync()
     {
         var sw = Stopwatch.StartNew();
 
-        var supplyStacks = await SupplyStacksService.ParseLinesUsingCharBuffersAsync(FilePath, Utf8Encoding, Provider);
-        var rearrangedStacks9000 = SupplyStacksService.RearrangeStacks(supplyStacks, 9000);
-        var rearrangedStacks9001 = SupplyStacksService.RearrangeStacks(supplyStacks, 9001);
-        var topCrates9000 = SupplyStacksService.GetTopCrates(rearrangedStacks9000);
-        var topCrates9001 = SupplyStacksService.GetTopCrates(rearrangedStacks9001);
-
-        var elapsedMs = sw.ElapsedMilliseconds;
-
-        if (!quiet)
+        var supplyStacks = await CharBuffersStacksParser.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
+        var results = new Results
         {
-            WriteStartingStacks(supplyStacks);
-            WriteRearrangedStacks(rearrangedStacks9000, topCrates9000, 9000);
-            WriteRearrangedStacks(rearrangedStacks9001, topCrates9001, 9001);
-            WriteElapsed(elapsedMs);
-        }
+            SupplyStacks = supplyStacks,
+            Results9000 = RearrangeStacks(supplyStacks, 9000),
+            Results9001 = RearrangeStacks(supplyStacks, 9001)
+        };
 
-        return topCrates9001.ToString();
+        results.ElapsedMs = sw.ElapsedMilliseconds;
+
+        return results;
     }
 
-    public static async Task<string?> GetResultsStackRowsAsync(bool quiet = false)
+    public static async Task<Results> GetResultsStackRowsAsync()
     {
         var sw = Stopwatch.StartNew();
 
-        var supplyStacks = await SupplyStacksService.ParseLinesUsingStackRowsAsync(FilePath, Utf8Encoding, Provider);
-        var rearrangedStacks9000 = SupplyStacksService.RearrangeStacks(supplyStacks, 9000);
-        var rearrangedStacks9001 = SupplyStacksService.RearrangeStacks(supplyStacks, 9001);
-        var topCrates9000 = SupplyStacksService.GetTopCrates(rearrangedStacks9000);
-        var topCrates9001 = SupplyStacksService.GetTopCrates(rearrangedStacks9001);
-
-        var elapsedMs = sw.ElapsedMilliseconds;
-
-        if (!quiet)
+        var supplyStacks = await StackRowsStacksParser.ParseLinesAsync(FilePath, Utf8Encoding, Provider);
+        var results = new Results
         {
-            WriteStartingStacks(supplyStacks);
-            WriteRearrangedStacks(rearrangedStacks9000, topCrates9000, 9000);
-            WriteRearrangedStacks(rearrangedStacks9001, topCrates9001, 9001);
-            WriteElapsed(elapsedMs);
-        }
+            SupplyStacks = supplyStacks,
+            Results9000 = RearrangeStacks(supplyStacks, 9000),
+            Results9001 = RearrangeStacks(supplyStacks, 9001)
+        };
 
-        return topCrates9001.ToString();
+        results.ElapsedMs = sw.ElapsedMilliseconds;
+
+        return results;
     }
 
-    private static void WriteStartingStacks(SupplyStacks supplyStacks)
+    private static ModelResults RearrangeStacks(SupplyStacks supplyStacks, int model)
     {
-        Console.WriteLine($"Starting stacks lines: {supplyStacks.Stacks.Count}, Rearrangement procedure lines: {supplyStacks.RearrangementProcedure.Count}");
-
-        Console.WriteLine();
-        Console.WriteLine("== Starting Stacks ==");
-        //Console.WriteLine($"Ids: {string.Join(' ', initialStacks.Select(s => s.Id))}");
-        foreach (var stack in supplyStacks.Stacks)
-            Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
-    }
-
-    private static void WriteRearrangedStacks(
-        IReadOnlyList<SupplyStack> rearrangedStacks, IReadOnlyList<char> topCrates, int model)
-    {
-        Console.WriteLine();
-        Console.WriteLine($"== Rearranged Stacks: {model} ==");
-        foreach (var stack in rearrangedStacks)
-            Console.WriteLine($"Stack {stack.Id}: {string.Join(" ", stack.Stack.Reverse())}");
-        Console.WriteLine();
-        Console.WriteLine($"Top crates {model}: {string.Join("", topCrates)}");
-    }
-
-    private static void WriteElapsed(double elapsedMs)
-    {
-        Console.WriteLine();
-        Console.WriteLine($"Elapsed: {elapsedMs} ms");
+        var rearrangedStacks = SupplyStacksService.RearrangeStacks(supplyStacks, model);
+        var topCrates = SupplyStacksService.GetTopCrates(rearrangedStacks);
+        return new ModelResults(model)
+        {
+            RearrangedStacks = rearrangedStacks,
+            TopCrates = topCrates
+        };
     }
 }
 
-public static class SupplyStacksService
+public static class CharBuffersStacksParser
 {
-    public static async Task<SupplyStacks> ParseLinesUsingCharBuffersAsync(
+    public static async Task<SupplyStacks> ParseLinesAsync(
         string filename, Encoding encoding, IFormatProvider? provider)
     {
         Stack<CharBuffer> startingStackLines = new();
@@ -147,7 +151,105 @@ public static class SupplyStacksService
         return new SupplyStacks(startingStacks ?? Array.Empty<SupplyStack>(), rearrangementProcedure);
     }
 
-    public static async Task<SupplyStacks> ParseLinesUsingStackRowsAsync(
+    private static bool TryParseStartingStackLines(
+        Stack<CharBuffer> startingStackLines, IFormatProvider? provider,
+        [MaybeNullWhen(false)] out IReadOnlyList<SupplyStack> result)
+    {
+        var state = StacksParseState.Ids;
+        IReadOnlyList<SupplyStack>? supplyStacks = null;
+        while (startingStackLines.TryPop(out var line))
+        {
+            try
+            {
+                var span = line.AsSpan();
+                switch (state)
+                {
+                    case StacksParseState.Ids:
+                        if (!TryParseStackIds(span, provider, out supplyStacks))
+                            return Try.Failed(out result);
+                        state = StacksParseState.Crates;
+                        break;
+
+                    case StacksParseState.Crates:
+                        if (!TryParseAndPushCrates(supplyStacks, span, provider))
+                            return Try.Failed(out result);
+                        break;
+                }
+            }
+            finally
+            {
+                line.Dispose();
+            }
+        }
+
+        result = supplyStacks;
+        return result is not null;
+    }
+
+    private static bool TryParseStackIds(
+        ReadOnlySpan<char> line, IFormatProvider? provider,
+        [MaybeNullWhen(false)] out IReadOnlyList<SupplyStack> result)
+    {
+        var supplyStacks = new List<SupplyStack>();
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            if (line[i] == ' ')
+                continue;
+
+            var idLength = line.Slice(i).IndexOf(' ');
+            if (idLength == -1)
+                idLength = line.Length - i;
+
+            if (int.TryParse(line.Slice(i, idLength), provider, out var id))
+                supplyStacks.Add(new SupplyStack(id, i));
+            else if (idLength > 0)
+                return Try.Failed(out result);
+
+            i += Math.Max(0, idLength - 1);
+        }
+
+        result = supplyStacks;
+        return supplyStacks.Count > 0;
+    }
+
+    private static bool TryParseAndPushCrates(
+        IReadOnlyList<SupplyStack>? supplyStacks, ReadOnlySpan<char> line, IFormatProvider? provider)
+    {
+        if (supplyStacks is null || supplyStacks.Count == 0)
+            return false;
+
+        if (line.IsWhiteSpace())
+            return false;
+
+        for (int i = 0; i < supplyStacks.Count; i++)
+        {
+            var supplyStack = supplyStacks[i];
+            var slice = line.Slice(Math.Max(0, supplyStack.Offset - 1));
+            var openOffset = slice.IndexOf('[');
+            if (openOffset == -1)
+                break;
+            if (openOffset > 2)
+                continue;
+
+            slice = slice.Slice(openOffset + 1);
+
+            var length = slice.IndexOf(']');
+            if (length == -1 || length > 1) // only support single character
+                return false;
+
+            var crate = slice[0];
+            //Console.WriteLine($"Adding {crate} to {supplyStack.Id}");
+            supplyStack.Stack.Push(crate);
+        }
+
+        return true;
+    }
+}
+
+public static class StackRowsStacksParser
+{
+    public static async Task<SupplyStacks> ParseLinesAsync(
         string filename, Encoding encoding, IFormatProvider? provider)
     {
         Stack<SupplyStackRow> stackRows = new();
@@ -197,41 +299,6 @@ public static class SupplyStacksService
         return new SupplyStacks(startingStacks ?? Array.Empty<SupplyStack>(), rearrangementProcedure);
     }
 
-    public static bool TryParseStartingStackLines(
-        Stack<CharBuffer> startingStackLines, IFormatProvider? provider,
-        [MaybeNullWhen(false)] out IReadOnlyList<SupplyStack> result)
-    {
-        var state = StacksParseState.Ids;
-        IReadOnlyList<SupplyStack>? supplyStacks = null;
-        while (startingStackLines.TryPop(out var line))
-        {
-            try
-            {
-                var span = line.AsSpan();
-                switch (state)
-                {
-                    case StacksParseState.Ids:
-                        if (!TryParseStackIds(span, provider, out supplyStacks))
-                            return Try.Failed(out result);
-                        state = StacksParseState.Crates;
-                        break;
-
-                    case StacksParseState.Crates:
-                        if (!TryParseAndPushCrates(supplyStacks, span, provider))
-                            return Try.Failed(out result);
-                        break;
-                }
-            }
-            finally
-            {
-                line.Dispose();
-            }
-        }
-
-        result = supplyStacks;
-        return result is not null;
-    }
-
     private static IReadOnlyList<SupplyStack> CreateSupplyStacks(
         Stack<SupplyStackRow> stackRows, IFormatProvider? provider)
     {
@@ -239,43 +306,50 @@ public static class SupplyStacksService
         var state = StacksParseState.Ids;
         while (stackRows.TryPop(out var stackRow))
         {
-            var span = stackRow.AsSpan();
-            switch (state)
+            try
             {
-                case StacksParseState.Ids:
+                var span = stackRow.AsSpan();
+                switch (state)
                 {
-                    if (stackRow.RowType != SupplyStackRow.Type.Ids)
-                        throw new ArgumentException($"Expected row type to be Ids but found: {stackRow.RowType}");
-
-                    supplyStacks = new SupplyStack[span.Length];
-                    for (int i = 0; i < span.Length; i++)
+                    case StacksParseState.Ids:
                     {
-                        int id = span[i].Label - '0';
-                        supplyStacks[i] = new SupplyStack(id, span[i].Offset);
+                        if (stackRow.RowType != SupplyStackRow.Type.Ids)
+                            throw new ArgumentException($"Expected row type to be Ids but found: {stackRow.RowType}");
+
+                        supplyStacks = new SupplyStack[span.Length];
+                        for (int i = 0; i < span.Length; i++)
+                        {
+                            int id = span[i].Label - '0';
+                            supplyStacks[i] = new SupplyStack(id, span[i].Offset);
+                        }
+                        state = StacksParseState.Crates;
+                        continue;
                     }
-                    state = StacksParseState.Crates;
-                    continue;
-                }
 
-                case StacksParseState.Crates:
-                {
-                    if (stackRow.RowType != SupplyStackRow.Type.Crates)
-                        throw new ArgumentException($"Expected row type to be Crates but found: {stackRow.RowType}");
-                    if (supplyStacks is null)
-                        throw new InvalidOperationException("Expected supplyStacks to be initialized but it was null");
-
-                    int j = 0;
-                    for (int i = 0; i < span.Length; i++)
+                    case StacksParseState.Crates:
                     {
-                        while (supplyStacks[j].Offset < span[i].Offset)
-                            j++;
-                        if (supplyStacks[j].Offset == span[i].Offset)
-                            supplyStacks[j].Stack.Push(span[i].Label);
-                        else
-                            throw new InvalidOperationException($"Expected supplyStack {supplyStacks[j].Id} offset {supplyStacks[j].Offset} to match crate [{span[i].Label}] offset {span[i].Offset}");
+                        if (stackRow.RowType != SupplyStackRow.Type.Crates)
+                            throw new ArgumentException($"Expected row type to be Crates but found: {stackRow.RowType}");
+                        if (supplyStacks is null)
+                            throw new InvalidOperationException("Expected supplyStacks to be initialized but it was null");
+
+                        int j = 0;
+                        for (int i = 0; i < span.Length; i++)
+                        {
+                            while (supplyStacks[j].Offset < span[i].Offset)
+                                j++;
+                            if (supplyStacks[j].Offset == span[i].Offset)
+                                supplyStacks[j].Stack.Push(span[i].Label);
+                            else
+                                throw new InvalidOperationException($"Expected supplyStack {supplyStacks[j].Id} offset {supplyStacks[j].Offset} to match crate [{span[i].Label}] offset {span[i].Offset}");
+                        }
+                        continue;
                     }
-                    continue;
                 }
+            }
+            finally
+            {
+                stackRow.Dispose();
             }
         }
 
@@ -284,7 +358,10 @@ public static class SupplyStacksService
 
         return supplyStacks;
     }
+}
 
+public static class SupplyStacksService
+{
     public static IReadOnlyList<SupplyStack> RearrangeStacks(SupplyStacks supplyStacks, int model)
     {
         if (supplyStacks.Stacks is null)
@@ -347,84 +424,38 @@ public static class SupplyStacksService
 
         return topCrates;
     }
-
-    private static bool TryParseStackIds(
-        ReadOnlySpan<char> line, IFormatProvider? provider,
-        [MaybeNullWhen(false)] out IReadOnlyList<SupplyStack> result)
-    {
-        var supplyStacks = new List<SupplyStack>();
-
-        for (int i = 0; i < line.Length; i++)
-        {
-            if (line[i] == ' ')
-                continue;
-
-            var idLength = line.Slice(i).IndexOf(' ');
-            if (idLength == -1)
-                idLength = line.Length - i;
-
-            if (int.TryParse(line.Slice(i, idLength), provider, out var id))
-                supplyStacks.Add(new SupplyStack(id, i));
-            else if (idLength > 0)
-                return Try.Failed(out result);
-
-            i += Math.Max(0, idLength - 1);
-        }
-
-        result = supplyStacks;
-        return supplyStacks.Count > 0;
-    }
-
-    private static bool TryParseAndPushCrates(
-        IReadOnlyList<SupplyStack>? supplyStacks, ReadOnlySpan<char> line, IFormatProvider? provider)
-    {
-        if (supplyStacks is null || supplyStacks.Count == 0)
-            return false;
-
-        if (line.IsWhiteSpace())
-            return false;
-
-        for (int i = 0; i < supplyStacks.Count; i++)
-        {
-            var supplyStack = supplyStacks[i];
-            var slice = line.Slice(Math.Max(0, supplyStack.Offset - 1));
-            var openOffset = slice.IndexOf('[');
-            if (openOffset == -1)
-                break;
-            if (openOffset > 2)
-                continue;
-
-            slice = slice.Slice(openOffset + 1);
-
-            var length = slice.IndexOf(']');
-            if (length == -1 || length > 1) // only support single character
-                return false;
-
-            var crate = slice[0];
-            //Console.WriteLine($"Adding {crate} to {supplyStack.Id}");
-            supplyStack.Stack.Push(crate);
-        }
-
-        return true;
-    }
-
-    private enum ParseState
-    {
-        StartingStacks,
-        RearrangementProcedure
-    }
-
-    private enum StacksParseState
-    {
-        Ids,
-        Crates
-    }
 }
 
-public record struct CratePosition(char Label, int Offset)
+internal enum ParseState
+{
+    StartingStacks,
+    RearrangementProcedure
+}
+
+internal enum StacksParseState
+{
+    Ids,
+    Crates
+}
+
+public record struct Results
+{
+    public SupplyStacks SupplyStacks { get; set; }
+    public ModelResults Results9000 { get; set; }
+    public ModelResults Results9001 { get; set; }
+    public double ElapsedMs { get; set; }
+}
+
+public record struct ModelResults(int Model)
+{
+    public IReadOnlyList<SupplyStack> RearrangedStacks { get; set; }
+    public IReadOnlyList<char> TopCrates { get; set; }
+}
+
+internal record struct CratePosition(char Label, int Offset)
 { }
 
-public record struct SupplyStackRow(SupplyStackRow.Type RowType) : ISpanParsable<SupplyStackRow>, IDisposable
+internal record struct SupplyStackRow(SupplyStackRow.Type RowType) : ISpanParsable<SupplyStackRow>, IDisposable
 {
     private CratePosition[] _values;
     private int _count;
