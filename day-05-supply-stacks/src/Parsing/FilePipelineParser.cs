@@ -2,6 +2,8 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Text;
 
+namespace Parsing;
+
 /// <summary>
 /// A file parser that parses each line of a file and returns a collection of parsed items.
 /// </summary>
