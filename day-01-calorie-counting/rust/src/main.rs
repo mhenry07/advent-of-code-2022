@@ -48,11 +48,8 @@ impl fmt::Display for TopCalories {
 fn main() {
     let filename = "../input.txt";
 
-    let result = run(filename);
-    match result {
-        Ok(top) => {
-            println!("{}", top);
-        },
+    match run(filename) {
+        Ok(top) => println!("{}", top),
         Err(e) => {
             println!("Application error: {e}");
             process::exit(1);
