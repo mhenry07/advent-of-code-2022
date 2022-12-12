@@ -16,18 +16,24 @@ impl TopCalories {
     }
 
     fn add_if_top(&mut self, calories: i32) -> Option<i32> {
-        let len = self.top.len();
-        for i in 0..len {
-            let top_i = self.top[i];
-            if calories > top_i {
-                self.top[i] = calories;
-                self.add_if_top(top_i);
-
-                return Some(1 + i as i32);
+        let mut ranking: Option<i32> = None;
+        let mut prev_top_i = 0;
+        let top = &mut self.top;
+        for i in 0..top.len() {
+            let top_i = top[i];
+            match ranking {
+                Some(_) => top[i] = prev_top_i,
+                None => {
+                    if calories > top_i {
+                        top[i] = calories;
+                        ranking = Some(1 + i as i32);
+                    }
+                }
             }
+            prev_top_i = top_i;
         }
 
-        None
+        ranking
     }
 }
 
