@@ -4,8 +4,8 @@ using System.Diagnostics;
 
 var sw = Stopwatch.StartNew();
 
-var rounds = Data.Input
-    .Split("\r\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+var allLines = await File.ReadAllLinesAsync("input.txt");
+var rounds = allLines
     .Select(r => Round.Parse(r))
     .ToArray();
 
@@ -20,7 +20,7 @@ Console.WriteLine($"Part 1: Total score: {totalScore1} points");
 // part 2
 Console.WriteLine($"Part 2: Total score: {totalScore2} points");
 
-Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds:N2} ms for {rounds.Length:N0} records"); // note: input is already in memory
+Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds:N2} ms for {rounds.Length:N0} records");
 
 // implementations
 

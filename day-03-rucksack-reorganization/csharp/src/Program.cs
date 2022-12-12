@@ -5,8 +5,7 @@ using System.Diagnostics;
 
 var sw = Stopwatch.StartNew();
 
-var rucksacks = Data.Input
-    .Split("\r\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var rucksacks = await File.ReadAllLinesAsync("input.txt");
 
 int badgeTotalPriority = 0;
 int totalPriority = 0;
@@ -37,7 +36,7 @@ Console.WriteLine($"Sum of common priorities: {totalPriority}");
 // part 2
 Console.WriteLine($"Sum of badge priorities: {badgeTotalPriority}");
 
-Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds:N2} ms for {rucksacks.Length:N0} records"); // note: input is already in memory
+Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds:N2} ms for {rucksacks.Length:N0} records");
 
 int Priority(char item)
 {
