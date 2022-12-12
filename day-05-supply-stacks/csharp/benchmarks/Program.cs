@@ -1,7 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 
-namespace Benchmark;
+namespace Benchmarks;
 
 internal class Program
 {

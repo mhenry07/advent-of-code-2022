@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Day5SupplyStacks.csproj" />
+    <ProjectReference Include="..\src\Day05.SupplyStacks.csproj" />
   </ItemGroup>
 
 </Project>
