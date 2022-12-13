@@ -1,5 +1,5 @@
 [package]
-name = "day-02-rock-paper-scissors"
+name = "day_02_rock_paper_scissors"
 version = "0.1.0"
 edition = "2021"
 

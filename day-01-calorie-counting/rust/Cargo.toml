@@ -1,5 +1,5 @@
 [package]
-name = "day-01-calorie-counting"
+name = "day_01_calorie_counting"
 version = "0.1.0"
 edition = "2021"
 
