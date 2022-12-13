@@ -1,5 +1,6 @@
 [workspace]
 
 members = [
-    "day-01-calorie-counting/rust"
+    "day-01-calorie-counting/rust",
+    "day-02-rock-paper-scissors/rust"
 ]
