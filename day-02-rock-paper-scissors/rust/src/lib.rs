@@ -1,4 +1,24 @@
-use std::{fs::File, io::{self, BufRead}, path::Path};
+use std::error::Error;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::Path;
+
+pub fn run<P>(filename: P) -> Result<[i32; 2], Box<dyn Error>>
+where P: AsRef<Path> {
+    let mut score_1 = 0;
+    let mut score_2 = 0;
+    let lines = read_lines(filename)?;
+
+    for l in lines {
+        let line = l?;
+        let round = Round::parse(&line).ok_or_else(|| format!("Error parsing line {line}"))?;
+
+        score_1 += round.score_1();
+        score_2 += round.score_2();
+    }
+
+    Ok([score_1, score_2])
+}
 
 pub struct Round {
     opponent: Shape,
@@ -124,7 +144,7 @@ impl Outcome {
 }
 
 // from https://doc.rust-lang.org/rust-by-example/std_misc/file/read_lines.html
-pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where P: AsRef<Path>, {
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
