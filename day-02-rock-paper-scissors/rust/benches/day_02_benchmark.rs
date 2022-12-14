@@ -1,7 +1,7 @@
 use std::fs;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use day_02_rock_paper_scissors::{run, Round};
+use day_02_rock_paper_scissors::{run, Results};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     const FILENAME: &str = "../input.txt";
@@ -18,17 +18,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         BenchmarkId::new("day 2", "in memory"),
         &contents,
         |b, c| b.iter(|| {
-            let mut score_1 = 0;
-            let mut score_2 = 0;
-        
+            let mut results = Results::new();
             for line in c.lines() {
-                let round = Round::parse(&line).unwrap();
-        
-                score_1 += round.score_1();
-                score_2 += round.score_2();
+                results.handle_line(&line).expect("failed to handle line");
             }
-        
-            [score_1, score_2]
+            results
         }));
 }
 

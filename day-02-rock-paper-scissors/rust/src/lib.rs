@@ -3,21 +3,37 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-pub fn run<P>(filename: P) -> Result<[i32; 2], Box<dyn Error>>
+pub fn run<P>(filename: P) -> Result<Results, Box<dyn Error>>
 where P: AsRef<Path> {
-    let mut score_1 = 0;
-    let mut score_2 = 0;
+    let mut results = Results::new();
     let lines = read_lines(filename)?;
-
     for l in lines {
         let line = l?;
-        let round = Round::parse(&line).ok_or_else(|| format!("Error parsing line {line}"))?;
-
-        score_1 += round.score_1();
-        score_2 += round.score_2();
+        results.handle_line(&line)?
     }
 
-    Ok([score_1, score_2])
+    Ok(results)
+}
+
+#[derive(Debug)]
+pub struct Results
+{
+    score_1: i32,
+    score_2: i32
+}
+
+impl Results {
+    pub fn new() -> Results {
+        Results { score_1: 0, score_2: 0 }
+    }
+
+    pub fn handle_line(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+        let round = Round::parse(&line).ok_or_else(|| format!("Error parsing line {line}"))?;
+
+        self.score_1 += round.score_1();
+        self.score_2 += round.score_2();
+        Ok(())
+    }
 }
 
 pub struct Round {
