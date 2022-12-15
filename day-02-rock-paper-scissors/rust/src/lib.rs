@@ -3,13 +3,24 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
+/// Solves Day 2 from a file path `filename`
 pub fn run<P>(filename: P) -> Result<Results, Box<dyn Error>>
 where P: AsRef<Path> {
     let mut results = Results::new();
     let lines = read_lines(filename)?;
     for l in lines {
         let line = l?;
-        results.handle_line(&line)?
+        results.handle_line(&line)?;
+    }
+
+    Ok(results)
+}
+
+/// Solves Day 2 from a string slice `input`
+pub fn run_lines(input: &str) -> Result<Results, Box<dyn Error>> {
+    let mut results = Results::new();
+    for line in input.lines() {
+        results.handle_line(&line)?;
     }
 
     Ok(results)
