@@ -95,8 +95,8 @@ impl<'a> Group<'a> {
 
     fn both_compartments_priority(&self, num: usize) -> Option<i32> {
         let sack = self.get_sack(num);
-        let (left, right) = sack.split_at(sack.len() / 2);
-        let common_item = find_common_compartment_item(left, right)?;
+        let (first, last) = sack.split_at(sack.len() / 2);
+        let common_item = find_common_compartment_item(first, last)?;
 
         Some(priority(common_item)?)
     }
@@ -109,17 +109,9 @@ impl<'a> Group<'a> {
     }
 
     fn find_badge(&self) -> Option<char> {
-        for i1 in self.sack_1.chars() {
-            for i2 in self.sack_2.chars() {
-                if i2 != i1 {
-                    continue;
-                }
-
-                for i3 in self.sack_3.chars() {
-                    if i3 == i2 && i2 == i1 {
-                        return Some(i1)
-                    }
-                }
+        for item in self.sack_1.chars() {
+            if self.sack_2.contains(item) && self.sack_3.contains(item) {
+                return Some(item)
             }
         }
 
@@ -127,12 +119,10 @@ impl<'a> Group<'a> {
     }
 }
 
-fn find_common_compartment_item(first: &str, second: &str) -> Option<char> {
-    for f in first.chars() {
-        for s in second.chars() {
-            if f == s {
-                return Some(f)
-            }
+fn find_common_compartment_item(first: &str, last: &str) -> Option<char> {
+    for item in first.chars() {
+        if last.contains(item) {
+            return Some(item)
         }
     }
 
