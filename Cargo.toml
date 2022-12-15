@@ -2,5 +2,6 @@
 
 members = [
     "day-01-calorie-counting/rust",
-    "day-02-rock-paper-scissors/rust"
+    "day-02-rock-paper-scissors/rust",
+    "day-03-rucksack-reorganization/rust"
 ]
