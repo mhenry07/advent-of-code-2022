@@ -52,35 +52,10 @@ impl Results {
     }
 
     fn handle_group(&mut self, group: &Group) -> Result<(), Box<dyn Error>> {
-        self.handle_rucksack_compartments(&group.sack_1)?;
-        self.handle_rucksack_compartments(&group.sack_2)?;
-        self.handle_rucksack_compartments(&group.sack_3)?;
-
-        self.handle_group_badge(group)?;
-
-        Ok(())
-    }
-
-    // TODO: is there a better way that doesn't require as_ref?
-    // TODO: use a better error type than String
-    fn handle_rucksack_compartments(&mut self, sack: &Option<String>) -> Result<(), String> {
-        let s = sack.as_ref().ok_or_else(|| "Expected Some but found None")?;
-        let (left, right) = s.split_at(s.len() / 2);
-        let common_item = common_item_compartments(left, right)
-            .ok_or_else(|| format!("No match found for: {s}"))?;
-
-        self.sum_1 += priority(common_item)
-            .ok_or_else(|| format!("No match found for: {s}"))?;
-
-        Ok(())
-    }
-
-    // TODO: use a better error type than String
-    fn handle_group_badge(&mut self, group: &Group) -> Result<(), String> {
-        let badge = group.find_badge()
+        self.sum_1 += group.compartment_priorities_sum()
             .ok_or_else(|| "No badge found for group")?;
 
-        self.sum_2 += priority(badge)
+        self.sum_2 += group.badge_priority()
             .ok_or_else(|| "No badge found for group")?;
 
         Ok(())
@@ -108,14 +83,51 @@ impl Group {
         }
     }
 
-    // TODO: is there a better way that doesn't require as_ref?
+    fn get_sack(&self, num: i32) -> Option<&str> {
+        let sack = match num {
+            0 => &self.sack_1,
+            1 => &self.sack_2,
+            2 => &self.sack_3,
+            _ => &None
+        };
+
+        return match sack {
+            Some(s) => Some(s.as_str()),
+            None => None
+        }
+    }
+
+    fn compartment_priorities_sum(&self) -> Option<i32> {
+        let mut sum = 0;
+        for i in 0..3 {
+            sum += self.both_compartments_priority(i)?;
+        }
+
+        Some(sum)
+    }
+
+    fn both_compartments_priority(&self, num: i32) -> Option<i32> {
+        let sack = self.get_sack(num)?;
+        let (left, right) = sack.split_at(sack.len() / 2);
+        let common_item = find_common_compartment_item(left, right)?;
+
+        Some(priority(common_item)?)
+    }
+
+    fn badge_priority(&self) -> Option<i32> {
+        let badge = self.find_badge()?;
+        let priority = priority(badge)?;
+
+        Some(priority)
+    }
+
     fn find_badge(&self) -> Option<char> {
-        for i1 in self.sack_1.as_ref()?.chars() {
-            for i2 in self.sack_2.as_ref()?.chars() {
+        for i1 in self.get_sack(0)?.chars() {
+            for i2 in self.get_sack(1)?.chars() {
                 if i2 != i1 {
                     continue;
                 }
-                for i3 in self.sack_3.as_ref()?.chars() {
+                for i3 in self.get_sack(2)?.chars() {
                     if i3 == i2 && i2 == i1 {
                         return Some(i1)
                     }
@@ -127,7 +139,7 @@ impl Group {
     }
 }
 
-fn common_item_compartments(first: &str, second: &str) -> Option<char> {
+fn find_common_compartment_item(first: &str, second: &str) -> Option<char> {
     for f in first.chars() {
         for s in second.chars() {
             if f == s {
