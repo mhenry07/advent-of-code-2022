@@ -64,6 +64,7 @@ impl Results {
     }
 }
 
+// it's more complex to use lifetimes `&'a str` vs. String, but it allows us to avoid string copies from run_lines
 struct Group<'a> {
     sack_1: &'a str,
     sack_2: &'a str,
@@ -122,6 +123,7 @@ impl<'a> Group<'a> {
 fn find_common_compartment_item(first: &str, last: &str) -> Option<char> {
     for item in first.chars() {
         if last.contains(item) {
+            //println!("common item: {item}, first: {first}, last: {last}");
             return Some(item)
         }
     }
@@ -142,4 +144,31 @@ fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where P: AsRef<Path>, {
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::run_lines;
+
+    const EXAMPLE: &'static str = "\
+vJrwpWtwJgWrhcsFMMfFFhFp
+jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
+PmmdzqPrVvPwwTWBwg
+wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
+ttgJtRGJQctTZtZT
+CrZsJsPPZsGzwwsLwLmpwMDw";
+
+    #[test]
+    fn part_1() {
+        let results = run_lines(EXAMPLE).unwrap();
+
+        assert_eq!(results.sum_1, 157)
+    }
+
+    #[test]
+    fn part_2() {
+        let results = run_lines(EXAMPLE).unwrap();
+
+        assert_eq!(results.sum_2, 70)
+    }
 }
