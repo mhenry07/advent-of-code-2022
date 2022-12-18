@@ -42,8 +42,7 @@ pub fn run_lines(input: &str) -> Result<Results, Box<dyn Error>> {
 }
 
 #[derive(Debug)]
-pub struct Results
-{
+pub struct Results {
     sum_1: i32,
     sum_2: i32
 }
@@ -55,10 +54,10 @@ impl Results {
 
     fn handle_group(&mut self, group: &Group) -> Result<(), Box<dyn Error>> {
         self.sum_1 += group.compartment_priorities_sum()
-            .ok_or_else(|| "Common compartment item not found for one or more rucksacks in group")?;
+            .ok_or_else(|| "common compartment item not found for one or more rucksacks in group")?;
 
         self.sum_2 += group.badge_priority()
-            .ok_or_else(|| "Badge not found for group")?;
+            .ok_or_else(|| "badge not found for group")?;
 
         Ok(())
     }
@@ -81,7 +80,7 @@ impl<'a> Group<'a> {
             0 => self.sack_1,
             1 => self.sack_2,
             2 => self.sack_3,
-            _ => panic!("Invalid num: {num}")
+            _ => panic!("invalid num: {num}")
         }
     }
 

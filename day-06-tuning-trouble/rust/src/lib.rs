@@ -14,7 +14,7 @@ where P: AsRef<Path> {
         return Ok(line.parse::<Results>()?);
     }
 
-    Err(Box::new(MessageProcessingError { details: String::from("Message not found") }))
+    Err(Box::new(MessageProcessingError::new("message not found")))
 }
 
 /// Solves Day 6 from a string slice `input`
@@ -23,12 +23,11 @@ pub fn run_lines(input: &str) -> Result<Results, Box<dyn Error>> {
         return Ok(line.parse::<Results>()?);
     }
 
-    Err(Box::new(MessageProcessingError { details: String::from("Message not found") }))
+    Err(Box::new(MessageProcessingError::new("message not found")))
 }
 
 #[derive(Debug)]
-pub struct Results
-{
+pub struct Results {
     packet_marker: i32,
     message_marker: i32
 }
@@ -38,10 +37,10 @@ impl FromStr for Results {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let packet_marker = find_first_marker(s, MarkerType::Packet)
-            .ok_or_else(|| MessageProcessingError { details: String::from("Failed to find first packet marker") })?;
+            .ok_or_else(|| MessageProcessingError::new("failed to find first packet marker"))?;
 
         let message_marker = find_first_marker(s, MarkerType::Message)
-            .ok_or_else(|| MessageProcessingError { details: String::from("Failed to find first message marker") })?;
+            .ok_or_else(|| MessageProcessingError::new("failed to find first message marker"))?;
 
         Ok(Results { packet_marker, message_marker })
     }
@@ -57,9 +56,15 @@ pub struct MessageProcessingError {
     details: String
 }
 
+impl MessageProcessingError {
+    fn new(details: &str) -> MessageProcessingError {
+        MessageProcessingError { details: String::from(details) }
+    }
+}
+
 impl fmt::Display for MessageProcessingError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,"{}",self.details)
+        write!(f, "{}", self.details)
     }
 }
 

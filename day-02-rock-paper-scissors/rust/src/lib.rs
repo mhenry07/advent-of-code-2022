@@ -27,8 +27,7 @@ pub fn run_lines(input: &str) -> Result<Results, Box<dyn Error>> {
 }
 
 #[derive(Debug)]
-pub struct Results
-{
+pub struct Results {
     score_1: i32,
     score_2: i32
 }
@@ -39,7 +38,7 @@ impl Results {
     }
 
     pub fn handle_line(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
-        let round = Round::parse(&line).ok_or_else(|| format!("Error parsing line {line}"))?;
+        let round = Round::parse(&line).ok_or_else(|| format!("error parsing line {line}"))?;
 
         self.score_1 += round.score_1();
         self.score_2 += round.score_2();

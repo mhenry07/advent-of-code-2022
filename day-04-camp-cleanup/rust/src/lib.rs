@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::fmt;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
@@ -11,7 +12,7 @@ where P: AsRef<Path> {
     let lines = read_lines(filename)?;
     for l in lines {
         let line = l?;
-        let pair = line.parse::<AssignmentPair>().unwrap();
+        let pair = line.parse::<AssignmentPair>()?;
         results.handle_pair(&pair);
     }
 
@@ -22,7 +23,7 @@ where P: AsRef<Path> {
 pub fn run_lines(input: &str) -> Result<Results, Box<dyn Error>> {
     let mut results = Results::new();
     for line in input.lines() {
-        let pair = line.parse::<AssignmentPair>().unwrap();
+        let pair = line.parse::<AssignmentPair>()?;
         results.handle_pair(&pair);
     }
 
@@ -30,8 +31,7 @@ pub fn run_lines(input: &str) -> Result<Results, Box<dyn Error>> {
 }
 
 #[derive(Debug)]
-pub struct Results
-{
+pub struct Results {
     count_1: i32,
     count_2: i32
 }
@@ -59,19 +59,40 @@ struct AssignmentPair {
     elf_2: Assignment
 }
 
-#[derive(Debug)]
-struct AssignmentPairError;
-
 impl FromStr for AssignmentPair {
     type Err = AssignmentPairError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (first, second) = s.split_once(',').ok_or(AssignmentPairError)?;
+        let (first, second) = s.split_once(',')
+            .ok_or_else(|| AssignmentPairError::new("failed to find delimiter ','"))?;
 
         Ok(AssignmentPair {
             elf_1: first.parse::<Assignment>()?,
             elf_2: second.parse::<Assignment>()?
         })
+    }
+}
+
+#[derive(Debug)]
+struct AssignmentPairError {
+    details: String
+}
+
+impl AssignmentPairError {
+    fn new(details: &str) -> AssignmentPairError {
+        AssignmentPairError { details: String::from(details) }
+    }
+}
+
+impl fmt::Display for AssignmentPairError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.details)
+    }
+}
+
+impl Error for AssignmentPairError {
+    fn description(&self) -> &str {
+        &self.details
     }
 }
 
@@ -95,9 +116,10 @@ impl FromStr for Assignment {
     type Err = AssignmentPairError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (start_text, end_text) = s.split_once('-').ok_or(AssignmentPairError)?;
-        let start = start_text.parse::<i32>().map_err(|_| AssignmentPairError)?;
-        let end = end_text.parse::<i32>().map_err(|_| AssignmentPairError)?;
+        let (start_text, end_text) = s.split_once('-')
+            .ok_or_else(|| AssignmentPairError::new("failed to find delimiter '-'"))?;
+        let start = start_text.parse::<i32>().map_err(|_| AssignmentPairError::new("failed to parse start"))?;
+        let end = end_text.parse::<i32>().map_err(|_| AssignmentPairError::new("failed to parse end"))?;
     
         Ok(Assignment { start, end })
     }
