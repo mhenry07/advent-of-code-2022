@@ -1,15 +1,12 @@
+use std::error::Error;
 use std::path::Path;
-use std::process;
 use day_02_rock_paper_scissors::run;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let filename = Path::new("../input.txt");
 
-    match run(filename) {
-        Ok(scores) => println!("Scores: {:?}", scores),
-        Err(e) => {
-            println!("Application error: {e}");
-            process::exit(1);
-        }
-    }
+    let scores = run(filename)?;
+    println!("Scores: {:?}", scores);
+
+    Ok(())
 }

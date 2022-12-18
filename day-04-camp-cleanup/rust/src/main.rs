@@ -1,15 +1,12 @@
+use std::error::Error;
 use std::path::Path;
-use std::process;
 use day_04_camp_cleanup::run;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let filename = Path::new("../input.txt");
 
-    match run(filename) {
-        Ok(counts) => println!("Pairs with overlap: {:?}", counts),
-        Err(e) => {
-            println!("Application error: {e}");
-            process::exit(1);
-        }
-    }
+    let counts = run(filename)?;
+    println!("Pairs with overlap: {:?}", counts);
+
+    Ok(())
 }

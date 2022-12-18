@@ -1,15 +1,12 @@
+use std::error::Error;
 use std::path::Path;
-use std::process;
 use day_06_tuning_trouble::run;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let filename = Path::new("../input.txt");
 
-    match run(filename) {
-        Ok(markers) => println!("First markers: {:?}", markers),
-        Err(e) => {
-            println!("Application error: {e}");
-            process::exit(1);
-        }
-    }
+    let markers = run(filename)?;
+    println!("First markers: {:?}", markers);
+
+    Ok(())
 }

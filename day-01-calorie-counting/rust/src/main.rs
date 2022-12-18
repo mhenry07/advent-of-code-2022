@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::BufRead;
 use std::path::Path;
-use std::{fmt, process, io};
+use std::{fmt, io};
 
 struct TopCalories {
     top: Vec<i32>
@@ -45,16 +45,13 @@ impl fmt::Display for TopCalories {
     }
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let filename = "../input.txt";
 
-    match run(filename) {
-        Ok(top) => println!("{}", top),
-        Err(e) => {
-            println!("Application error: {e}");
-            process::exit(1);
-        }
-    }
+    let top = run(filename)?;
+    println!("{}", top);
+
+    Ok(())
 }
 
 fn run<P>(filename: P) -> Result<TopCalories, Box<dyn Error>>
