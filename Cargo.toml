@@ -5,4 +5,5 @@ members = [
     "day-02-rock-paper-scissors/rust",
     "day-03-rucksack-reorganization/rust",
     "day-04-camp-cleanup/rust",
+    "day-06-tuning-trouble/rust"
 ]
